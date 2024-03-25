@@ -18,21 +18,25 @@ const UpdateInvoice = FormSchema.omit({ id: true, date: true });
 
 export async function createInvoice(formData: FormData) {
   const { customerId, amount, status } = CreateInvoice.parse({
-    //Validate the types with Zod
     customerId: formData.get('customerId'),
     amount: formData.get('amount'),
     status: formData.get('status'),
   });
-  const amountInPennies = Math.round(amount * 100); //Converting the amount to pennies
+
+  const amountInPennies = Math.round(amount * 100);
   const date = new Date().toISOString().split('T')[0];
-
-  await sql`
-    INSERT INTO invoices (customer_id, amount, status, date)
-    VALUES (${customerId}, ${amountInPennies}, ${status}, ${date})
-  `;
-
-  revalidatePath('/dashboard/invoices'); //clear the client cache and make a new server request
-  redirect('/dashboard/invoices'); //redirect the user to the invoice's page
+  try {
+    await sql`
+      INSERT INTO invoices (customer_id, amount, status, date)
+      VALUES (${customerId}, ${amountInPennies}, ${status}, ${date})
+    `;
+  } catch (error) {
+    return {
+      message: 'Database Error: Failed to Create Invoice.',
+    };
+  }
+  revalidatePath('/dashboard/invoices');
+  redirect('/dashboard/invoices');
 }
 
 export async function updateInvoice(id: string, formData: FormData) {
@@ -43,13 +47,30 @@ export async function updateInvoice(id: string, formData: FormData) {
   });
 
   const amountInPennies = amount * 100;
-
-  await sql`
+  try {
+    await sql`
     UPDATE invoices
     SET customer_id = ${customerId}, amount = ${amountInPennies}, status = ${status}
     WHERE id = ${id}
   `;
-
+  } catch (error) {
+    return {
+      message: 'Database Error: Failed to Update Invoice.',
+    };
+  }
   revalidatePath('/dashboard/invoices');
   redirect('/dashboard/invoices');
+}
+
+export async function deleteInvoice(id: string) {
+  throw new Error('Failed to Delete Invoice');
+  try {
+    await sql`DELETE FROM invoices WHERE id = ${id}`;
+    revalidatePath('/dashboard/invoices');
+    return { message: 'Invoice Deleted Successfully.' };
+  } catch (error) {
+    return {
+      message: 'Database Error: Failed to Delete Invoice.',
+    };
+  }
 }

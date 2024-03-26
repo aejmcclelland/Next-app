@@ -37,3 +37,4 @@ export function DeleteInvoice({ id }: { id: string }) {
     </form>
   );
 }
+
